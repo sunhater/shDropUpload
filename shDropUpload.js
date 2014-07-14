@@ -1,5 +1,6 @@
 /*!
- * jQuery shDropUpload v0.9
+ * jQuery shDropUpload v1.0
+ * 2014-07-14
  *
  * Copyright (c) 2010-2014 Pavel Tzonkov <sunhater@sunhater.com>
  * Dual licensed under the MIT and GPL licenses.
@@ -16,7 +17,7 @@
         )
             return;
 
-        // Dragging local files options
+        // Options about local files drag & drop
         var lo = {
 
             // URL to upload handler script
@@ -25,27 +26,43 @@
             // File field name
             param: "upload",
 
-            // This function will be called before uploading
-            precheck: function(e) {
+            // Maximum filesize in bytes. If a dragged file is too big, the browser crashes
+            maxFilesize: 10485760,
+
+            // Called before all uploads. Useful for implementing some checks before uploads begins
+            // If it returns false, the uploading will be canceled.
+            precheck: function(evt) {
+                console.log("shDropUpload: Upload process started");
                 return true;
             },
 
-            // Updating progress callback
-            progress: function(filesCount, currentFile, progress, e1, e2, xhr) {},
-
-            // Called after successful upload request
-            success: function(response, statusText, xhr, e) {},
-
-            // Called when an upload request fails
-            error: function(xhr, textStatus, e) {
-                alert('Failed to upload ' + e.target.file.name + '!');
+            // Called when an upload begins
+            begin: function(xhr, currentFile, filesCount) {
+                console.log("shDropUpload:     Uploading file " + currentFile + " of " + filesCount + " (" + xhr.file.name + ")");
             },
 
-            // This function will be called when all files are proceeded
-            finish: function() {}
+            // Called after successful upload request
+            success: function(xhr, currentFile, filesCount) {
+                console.log("shDropUpload:     Upload success (" + xhr.file.name + ")");
+            },
+
+            // Called when an upload request fails
+            error: function(xhr, currentFile, filesCount) {
+                console.log("shDropUpload:     Upload request failed (" + xhr.file.name + ")");
+            },
+
+            // Called when a file exceeds the maxFilesize option
+            filesizeCallback: function(xhr, currentFile, filesCount) {
+                console.log("shDropUpload:     File is too big (" + xhr.file.name + ")");
+            },
+
+            // Called when all files are proceeded
+            finish: function() {
+                console.log("shDropUpload: Upload process finished");
+            }
         },
 
-        // Dragging Remote Images and Links Options
+        // Options about remote images and links drag & drop
         ro = {
 
             // Ajax options
@@ -53,10 +70,15 @@
                 url: "",
                 type: "post",
                 dataType: "json",
-                data: {url: "{url}"}, // {url} marks the URL from dragged object
-                success: function(response) {},
+                data: {
+                    url: "{url}",  // {url} marks the URL from dragged object
+                    type: "{type}" // {type} marks the tag type ("a" or "img")
+                },
+                success: function(response) {
+                    console.log("shDropUpload: URL has been passed to the server.");
+                },
                 error: function() {
-                    alert("Response error!");
+                    console.log("shDropUpload: Request failed!");
                 }
             }
         },
@@ -84,13 +106,8 @@
             return utftext;
         };
 
-        if (remoteOptions && remoteOptions.ajax) {
-            var opts = ro.ajax;
-            $.extend(opts, remoteOptions.ajax)
-            remoteOptions.ajax = opts;
-        }
-        $.extend(ro, remoteOptions);
-        $.extend(lo, localOptions);
+        $.extend(true, ro, remoteOptions);
+        $.extend(true, lo, localOptions);
 
         if (!XMLHttpRequest.prototype.sendAsBinary) {
             XMLHttpRequest.prototype.sendAsBinary = function(datastr) {
@@ -98,7 +115,7 @@
                         return x.charCodeAt(0) & 0xff;
                     }),
                     ui8a = new Uint8Array(ords);
-                this.send(ui8a.buffer);
+                this.send(ui8a);
             }
         }
 
@@ -133,7 +150,6 @@
                 $(t).removeClass('drag');
 
                 var remote = e.dataTransfer.getData('text/html');
-
                 // Remote drag
                 if (remote) {
                     if (!remoteOptions)
@@ -145,19 +161,22 @@
                             : (el.is('a')
                                 ? el.attr('href')
                                 : false
-                            )
+                            );
+
                     if (!url)
                         return false;
 
-                    var opts = ro.ajax;
+                    var opts = $.extend(true, {}, ro.ajax);
                     if (opts.data) {
                         $.each(opts.data, function(i, j) {
                             if (j == "{url}")
                                 opts.data[i] = url;
+                            if (j == "{type}")
+                                opts.data[i] = el.prop("tagName").toLowerCase();
                         });
                     }
-                    opts.url.replace('{url}', encodeURIComponent(url));
-
+                    opts.url.replace('{url}', encodeURIComponent(url))
+                            .replace('{type}', el.prop("tagName").toLowerCase());
                     $.ajax(opts);
 
                 // Local drag
@@ -187,6 +206,7 @@
                 if (uploadQueue && uploadQueue.length) {
 
                     var file = uploadQueue.shift(),
+                        currentNum = filesCount - uploadQueue.length,
                         reader = new FileReader();
 
                     currentFile = reader.file = file;
@@ -197,38 +217,36 @@
                         var xhr = new XMLHttpRequest(),
                             postbody = '--' + boundary + '\r\nContent-Disposition: form-data; name="' + lo.param + '"';
 
-                        if (evt.target.file.name)
-                            postbody += '; filename="' + utf8encode(evt.target.file.name) + '"';
-                        postbody += '\r\n';
-                        if (evt.target.file.size)
-                            postbody += "Content-Length: " + evt.target.file.size + "\r\n";
-                        postbody += "Content-Type: " + evt.target.file.type + "\r\n\r\n" + evt.target.result + "\r\n--" + boundary + "\r\nContent-Disposition: form-data;\r\n--" + boundary + "--\r\n";
-                        xhr.filaname = evt.target.file.name;
+                        xhr.file = evt.target.file;
 
-                        if (xhr.upload) {
-                            var progress = function(e) {
-                                var progress = e.lengthComputable
-                                    ? Math.round((e.loaded * 100) / evt.total) + '%'
-                                    : Math.round(e.loaded / 1024) + " KB";
-                                lo.progress(filesCount - uploadQueue.length, filesCount, progress, e, evt, xhr);
-                            };
-                            progress();
-                            xhr.upload.filaname = evt.target.file.name;
-                            xhr.upload.addEventListener("progress", progress, false);
+                        lo.begin(xhr, currentNum, filesCount);
+
+                        if (lo.maxFilesize && (xhr.file.size > lo.maxFilesize)) {
+                            uploadInProgress = false;
+                            lo.filesizeCallback(xhr, currentNum, filesCount);
+                            uploadNext();
+                            return;
                         }
+
+                        if (xhr.file.name)
+                            postbody += '; filename="' + utf8encode(xhr.file.name) + '"';
+                        postbody += '\r\n';
+                        if (xhr.file.size)
+                            postbody += "Content-Length: " + xhr.file.size + "\r\n";
+                        postbody += "Content-Type: " + xhr.file.type + "\r\n\r\n" + evt.target.result + "\r\n--" + boundary + "\r\nContent-Disposition: form-data;\r\n--" + boundary + "--\r\n";
 
                         xhr.open('post', lo.url, true);
                         xhr.setRequestHeader('Content-Type', "multipart/form-data; boundary=" + boundary);
 
                         xhr.onload = function() {
                             uploadInProgress = false;
-                            lo.success(xhr.responseText, xhr.statusText, xhr, evt);
+                            lo.success(xhr, currentNum, filesCount);
                             uploadNext();
                         };
 
                         xhr.onerror = function() {
                             uploadInProgress = false;
-                            lo.error(xhr, xhr.statusText, evt);
+                            lo.error(xhr, currentNum, filesCount);
                             uploadNext();
                         };
 
