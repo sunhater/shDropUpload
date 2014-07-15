@@ -62,8 +62,15 @@
             }
         },
 
-        // Options about remote images and links drag & drop
+        // Options about remote objects drag & drop
         ro = {
+
+            // If a selection is dropped you could to fetch multiple URLs from selected HTML
+            // You can define the selectors URLs will be fetched from
+            selectors: ['img[src]', 'a[href]', 'script[src]', 'link[href]'],
+
+            // Check URLs for uniqueness
+            unique: true,
 
             // Ajax options
             ajax: {
@@ -149,34 +156,50 @@
                 if (e.stopPropagation) e.stopPropagation();
                 $(t).removeClass('drag');
 
-                var remote = e.dataTransfer.getData('text/html');
+                var el = e.dataTransfer.getData('text/html');
+
                 // Remote drag
-                if (remote) {
+                if (el) {
+
                     if (!remoteOptions)
                         return false;
 
-                    var el = $($(remote)[1]),
-                        url = el.is('img')
-                            ? el.attr('src')
-                            : (el.is('a')
-                                ? el.attr('href')
-                                : false
-                            );
+                    el = '<div>' + el.toString() + '</div>';
+                    var urls = [], types = [];
 
-                    if (!url)
+                    $.each(ro.selectors, function(i, selector) {
+                        if (!/^[a-z0-9]+\[[a-z]+\]$/gi.test(selector))
+                            return true;
+                        var type = selector.split('[')[0],
+                            attr = selector.split('[')[1].split(']')[0];
+                        $(el).find(selector).each(function() {
+                            var url = $(this).attr(attr);
+                            if (ro.unique)
+                                for (var i = 0; i < urls.length; i++)
+                                    if ((urls[i] == url) && (types[i] == type))
+                                        return true;
+                            urls.push(url);
+                            types.push(type);
+                        });
+                    });
+
+                    if (!urls.length)
                         return false;
+
+                    if (urls.length == 1) {
+                        urls = urls[0];
+                        types = types[0];
+                    }
 
                     var opts = $.extend(true, {}, ro.ajax);
                     if (opts.data) {
                         $.each(opts.data, function(i, j) {
                             if (j == "{url}")
-                                opts.data[i] = url;
+                                opts.data[i] = urls;
                             if (j == "{type}")
-                                opts.data[i] = el.prop("tagName").toLowerCase();
+                                opts.data[i] = types;
                         });
                     }
-                    opts.url.replace('{url}', encodeURIComponent(url))
-                            .replace('{type}', el.prop("tagName").toLowerCase());
                     $.ajax(opts);
 
                 // Local drag

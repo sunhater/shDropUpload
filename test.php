@@ -76,11 +76,28 @@ $(function() {
         ajax: {
             success: function(response) {
 
-                if (response.post.type == "img")
-                    $('#response').html('URL to image has been passed to the server!<br /><img src="' + response.post.url + '" />');
+                if ($.isArray(response.post.url)) {
+                    $('#response').html('');
+                    $.each(response.post.url, function(i) {
+                        var type = response.post.type[i],
+                            url = response.post.url[i]
 
-                else if (response.post.type == "a")
-                    $('#response').html('Link URL has been passed to the server!<br /><a href="' + response.post.url + '">' + htmlData(response.post.url) + '</a>');
+                        if (!$('#response .' + type).get(0))
+                            $('#response').append('<div class="' + type + '">Passed URLs, type "<b>' + type + '</b>":<br /></div>');
+
+                        var div = $('#response .' + type);
+
+                        div.append('<a href="' + url + '">' + htmlData(url) + '</a><br />');
+                    });
+
+                } else {
+
+                    if (response.post.type == "img")
+                        $('#response').html('Image URL has been passed to the server!<br /><img src="' + response.post.url + '" />');
+
+                    else
+                        $('#response').html('URL has been passed to the server!<br /><a href="' + response.post.url + '">' + htmlData(response.post.url) + '</a>');
+                }
             }
         }
     });
