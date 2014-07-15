@@ -28,7 +28,7 @@ $(function() {
 
     $('#dragHere').shDropUpload({
 
-        url: "test.php",
+        url: "demo.php",
 
         precheck: function() {
             $('#progress').css({visibility: "visible"});
@@ -64,6 +64,11 @@ $(function() {
             $('#response').append("Request error! " + htmlData(xhr.file.name) + '<br /><br />');
         },
 
+        abort: function(xhr, current, files) {
+            updateBar(current, files);
+            $('#response').append("Request aborted! " + htmlData(xhr.file.name) + '<br /><br />');
+        },
+
         filesizeCallback: function(xhr, current, files) {
             updateBar(current, files);
             $('#response').append("File is too big! " + htmlData(xhr.file.name) + '<br /><br />');
@@ -76,7 +81,7 @@ $(function() {
 
     }, {
         ajax: {
-            url: "test.php",
+            url: "demo.php",
 
             success: function(response) {
 
@@ -87,7 +92,7 @@ $(function() {
                             url = response.post.url[i]
 
                         if (!$('#response .' + type).get(0))
-                            $('#response').append('<div class="' + type + '">Passed URLs, type "<b>' + type + '</b>":<br /></div>');
+                            $('#response').append('<div class="' + type + '" style="margin:15px 0">Passed URLs, type "<b>' + type + '</b>":<br /></div>');
 
                         var div = $('#response .' + type);
 
@@ -138,7 +143,7 @@ $(function() {
 </style>
 </head>
 <body>
-<div id="dragHere">Drop here file(s) from your local file manager, or link or image from another web page</div>
+<div id="dragHere">Drop here file(s) from your local file manager, or image from another web page</div>
 <div id="progress"><div class="bar"></div><div class="text"></div></div>
 <div id="response"></div>
 </body>

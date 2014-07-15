@@ -1,13 +1,17 @@
 /*!
  * jQuery shDropUpload v1.0
- * 2014-07-14
+ * 2014-07-15
  *
  * Copyright (c) 2010-2014 Pavel Tzonkov <sunhater@sunhater.com>
  * Dual licensed under the MIT and GPL licenses.
  */
 
 (function($) {
-    $.fn.shDropUpload = function(localOptions, remoteOptions) {
+
+  /** @param localOptions    Options about local files drag & drop
+    * @param remoteOptions   Options about HTML objects drag & drop */
+
+      $.fn.shDropUpload = function(localOptions, remoteOptions) {
 
         // Compatibility check
         if ((typeof XMLHttpRequest == "undefined") ||
@@ -17,7 +21,7 @@
         )
             return;
 
-        // Options about local files drag & drop
+        // Default options about local files drag & drop
         var lo = {
 
             // URL to upload handler script
@@ -51,6 +55,11 @@
                 console.log("shDropUpload:     Upload request failed (" + xhr.file.name + ")");
             },
 
+            // Called when an upload request is aborted
+            abort: function(xhr, currentFile, filesCount) {
+                console.log("shDropUpload:     Upload request aborted (" + xhr.file.name + ")");
+            },
+
             // Called when a file exceeds the maxFilesize option
             filesizeCallback: function(xhr, currentFile, filesCount) {
                 console.log("shDropUpload:     File is too big (" + xhr.file.name + ")");
@@ -62,12 +71,14 @@
             }
         },
 
-        // Options about remote objects drag & drop
+        // Default options about HTML objects drag & drop
         ro = {
 
             // If a selection is dropped you could to fetch multiple URLs from selected HTML
-            // You can define the selectors URLs will be fetched from
-            selectors: ['img[src]', 'a[href]', 'script[src]', 'link[href]'],
+            // You can define the selectors URLs will be fetched from. If you want only images
+            // leave 'img[src]' only
+            selectors: 'img[src]',
+            //selectors: 'img[src], a[href], script[src], link[href]',
 
             // Check URLs for uniqueness
             unique: true,
@@ -165,13 +176,17 @@
                 // Remote drag
                 if (el) {
 
-                    if (!remoteOptions)
+                    if (remoteOptions === false)
                         return false;
 
                     el = '<div>' + el.toString() + '</div>';
                     var urls = [], types = [];
 
-                    $.each(ro.selectors, function(i, selector) {
+                    var selectors = $.isArray(ro.selectors)
+                        ? ro.selectors
+                        : ro.selectors.split(/\s*,\s*/g);
+
+                    $.each(selectors, function(i, selector) {
                         if (!/^[a-z0-9]+\[[a-z]+\]$/gi.test(selector))
                             return true;
                         var type = selector.split('[')[0],
@@ -208,7 +223,7 @@
 
                 // Local drag
                 } else {
-                    if (!localOptions)
+                    if (localOptions === false)
                         return false;
 
                     filesCount += e.dataTransfer.files.length;
@@ -225,8 +240,9 @@
                     }
 
                     uploadNext();
-                    return false;
                 }
+
+                return false;
             },
 
             uploadNext = function() {
@@ -289,6 +305,12 @@
                             uploadNext();
                         };
 
+                        xhr.onabort = function() {
+                            uploadInProgress = false;
+                            lo.abort(xhr, currentNum, filesCount);
+                            uploadNext();
+                        };
+
                         xhr.sendAsBinary(postbody);
                     };
 
@@ -320,4 +342,5 @@
             t.addEventListener('drop', drop, false);
         });
     }
+
 })(jQuery);
