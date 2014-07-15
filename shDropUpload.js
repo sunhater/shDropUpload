@@ -211,10 +211,13 @@
                     if (!localOptions)
                         return false;
 
-                    if (!lo.precheck(e))
+                    filesCount += e.dataTransfer.files.length;
+
+                    if (!filesCount)
                         return false;
 
-                    filesCount += e.dataTransfer.files.length;
+                    if (!lo.precheck(e))
+                        return false;
 
                     for (var i = 0; i < filesCount; i++) {
                         var file = e.dataTransfer.files[i];
@@ -271,7 +274,7 @@
                             postbody += "Content-Length: " + xhr.file.size + "\r\n";
                         postbody += "Content-Type: " + xhr.file.type + "\r\n\r\n" + (ie ? binary : evt.target.result) + "\r\n--" + boundary + "\r\nContent-Disposition: form-data;\r\n--" + boundary + "--\r\n";
 
-                        xhr.open('post', "http://localhost/shDropUpload/test.php", true);
+                        xhr.open('post', lo.url, true);
                         xhr.setRequestHeader('Content-Type', "multipart/form-data; boundary=" + boundary);
 
                         xhr.onload = function() {

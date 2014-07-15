@@ -28,6 +28,8 @@ $(function() {
 
     $('#dragHere').shDropUpload({
 
+        url: "test.php",
+
         precheck: function() {
             $('#progress').css({visibility: "visible"});
             $('#response').html('');
@@ -74,6 +76,8 @@ $(function() {
 
     }, {
         ajax: {
+            url: "test.php",
+
             success: function(response) {
 
                 if ($.isArray(response.post.url)) {
