@@ -156,7 +156,11 @@
                 if (e.stopPropagation) e.stopPropagation();
                 $(t).removeClass('drag');
 
-                var el = e.dataTransfer.getData('text/html');
+                try {
+                    var el = e.dataTransfer.getData('text/html');
+                } catch (e) {
+                    var el = false;
+                }
 
                 // Remote drag
                 if (el) {
@@ -230,7 +234,8 @@
 
                     var file = uploadQueue.shift(),
                         currentNum = filesCount - uploadQueue.length,
-                        reader = new FileReader();
+                        reader = new FileReader(),
+                        ie = (typeof reader.readAsBinaryString == "undefined");
 
                     currentFile = reader.file = file;
 
@@ -251,14 +256,22 @@
                             return;
                         }
 
+                        if (ie) {
+                            var binary = "",
+                                bytes = new Uint8Array(evt.target.result);
+
+                            for (var i = 0; i < bytes.byteLength; i++)
+                                binary += String.fromCharCode(bytes[i]);
+                        }
+
                         if (xhr.file.name)
                             postbody += '; filename="' + utf8encode(xhr.file.name) + '"';
                         postbody += '\r\n';
                         if (xhr.file.size)
                             postbody += "Content-Length: " + xhr.file.size + "\r\n";
-                        postbody += "Content-Type: " + xhr.file.type + "\r\n\r\n" + evt.target.result + "\r\n--" + boundary + "\r\nContent-Disposition: form-data;\r\n--" + boundary + "--\r\n";
+                        postbody += "Content-Type: " + xhr.file.type + "\r\n\r\n" + (ie ? binary : evt.target.result) + "\r\n--" + boundary + "\r\nContent-Disposition: form-data;\r\n--" + boundary + "--\r\n";
 
-                        xhr.open('post', lo.url, true);
+                        xhr.open('post', "http://localhost/shDropUpload/test.php", true);
                         xhr.setRequestHeader('Content-Type', "multipart/form-data; boundary=" + boundary);
 
                         xhr.onload = function() {
@@ -276,7 +289,10 @@
                         xhr.sendAsBinary(postbody);
                     };
 
-                    reader.readAsBinaryString(file);
+                    if (ie)
+                        reader.readAsArrayBuffer(file);
+                    else
+                        reader.readAsBinaryString(file);
 
                 } else {
                     filesCount = 0;
