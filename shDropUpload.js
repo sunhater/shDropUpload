@@ -1,6 +1,7 @@
 /*!
- * jQuery shDropUpload v1.0
- * 2014-07-15
+ * jQuery shDropUpload v1.1
+ * http://jquery.sunhater.com/shDropUpload
+ * 2014-07-17
  *
  * Copyright (c) 2010-2014 Pavel Tzonkov <sunhater@sunhater.com>
  * Dual licensed under the MIT and GPL licenses.
@@ -173,10 +174,10 @@
                     var el = false;
                 }
 
-                // Remote drag
+                // Remote drop
                 if (el) {
 
-                    if (remoteOptions === false)
+                    if (!remoteOptions)
                         return false;
 
                     el = '<div>' + el.toString() + '</div>';
@@ -221,17 +222,14 @@
                     }
                     $.ajax(opts);
 
-                // Local drag
+                // Local drop
                 } else {
-                    if (localOptions === false)
+                    if (!localOptions)
                         return false;
 
                     filesCount += e.dataTransfer.files.length;
 
-                    if (!filesCount)
-                        return false;
-
-                    if (!lo.precheck(e))
+                    if (!filesCount || !lo.precheck(e))
                         return false;
 
                     for (var i = 0; i < filesCount; i++) {

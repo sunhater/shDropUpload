@@ -1,10 +1,14 @@
 <?php
 
+// Local drop response
 if (count($_FILES)) {
+    if (isset($_FILES['upload']['tmp_name']))
+        @unlink($_FILES['upload']['tmp_name']);
     header("Content-Type: text/plain");
     die(json_encode(array('file' => $_FILES)));
 }
 
+// Remote drop response
 if (!empty($_POST)) {
     header("Content-Type: text/plain");
     die(json_encode(array('post' => $_POST)));
