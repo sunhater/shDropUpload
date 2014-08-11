@@ -286,7 +286,7 @@
                         postbody += '\r\n';
                         if (xhr.file.size)
                             postbody += "Content-Length: " + xhr.file.size + "\r\n";
-                        postbody += "Content-Type: " + xhr.file.type + "\r\n\r\n" + (ie ? binary : evt.target.result) + "\r\n--" + boundary + "\r\nContent-Disposition: form-data;\r\n--" + boundary + "--\r\n";
+                        postbody += "Content-Type: " + xhr.file.type + "\r\n\r\n" + (ie ? binary : evt.target.result) + "\r\n--" + boundary + "--\r\n";
 
                         xhr.open('post', lo.url, true);
                         xhr.setRequestHeader('Content-Type', "multipart/form-data; boundary=" + boundary);
